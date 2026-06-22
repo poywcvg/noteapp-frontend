@@ -1,44 +1,21 @@
 export const useAttachments = () => {
-    const config = useRuntimeConfig()
-    const { accessToken } = useAuth()
+  const { post, delete: del } = useApi()
 
-    const baseURL = config.public.apiBase
+  const uploadAttachment = async (noteId, file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('note', noteId)
 
-    const uploadAttachment = async (noteId, file) => {
-        const formData = new FormData()
-        formData.append('note', noteId)
-        formData.append('file', file)
+    // FormData خودش Content-Type رو تنظیم می‌کنه، پس headers نذار
+    return await post('/notes/attachments/', formData)
+  }
 
-        return await $fetch('/attachments/', {
-            baseURL,
-            method: 'POST',
-            body: formData,
-            headers: {
-                Authorization: `Bearer ${accessToken.value}`
-            }
-        })
-    }
+  const deleteAttachment = async (attachmentId) => {
+    return await del(`/notes/attachments/${attachmentId}/`)
+  }
 
-    const getAttachments = async (noteId) => {
-        return await $fetch('/attachments/', {
-            baseURL,
-            method: 'GET',
-            params: { note: noteId },
-            headers: { Authorization: `Bearer ${accessToken.value}` }
-        })
-    }
-
-    const deleteAttachment = async (attachmentId) => {
-        return await $fetch(`/attachments/${attachmentId}/`, {
-            baseURL,
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${accessToken.value}` }
-        })
-    }
-
-    return {
-        uploadAttachment,
-        getAttachments,
-        deleteAttachment
-    }
+  return {
+    uploadAttachment,
+    deleteAttachment,
+  }
 }

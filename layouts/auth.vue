@@ -1,15 +1,13 @@
 <template>
-  <main class="auth-layout">
+  <div class="auth-layout">
     <slot />
-  </main>
+  </div>
 </template>
 
 <style scoped>
 .auth-layout {
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #f8fafc;
+  background: linear-gradient(135deg, #F7F5F2 0%, #E7E1D7 100%);
+  direction: rtl;
 }
 </style>
