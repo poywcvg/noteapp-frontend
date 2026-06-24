@@ -38,6 +38,23 @@ export const useNotes = () => {
     }
   }
 
+  const archivedNotes = ref([])
+
+  const fetchArchivedNotes = async () => {
+    loading.value = true
+    error.value = null
+    try {
+      const data = await api.get(`${API_ENDPOINTS.notes.list}?is_archived=true`)
+      archivedNotes.value = data
+      return data
+    } catch (err) {
+      error.value = err
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const createNote = async (noteData) => {
     loading.value = true
     error.value = null
@@ -224,7 +241,9 @@ export const useNotes = () => {
 
     restoreNote,
 
-    permanentDeleteNote
+    permanentDeleteNote,
+    archivedNotes,
+    fetchArchivedNotes
 
   }
 

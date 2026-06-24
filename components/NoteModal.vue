@@ -1,73 +1,83 @@
+<!-- NoteModal.vue -->
 <template>
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="isOpen" class="modal-overlay" @click="handleClose">
         <div class="modal-container" @click.stop>
+          <!-- Header -->
           <div class="modal-header">
-            <h2>{{ isEditMode ? "ویرایش یادداشت" : "یادداشت جدید" }}</h2>
-            <button @click="handleClose" class="close-btn">✕</button>
+            <div class="header-title">
+              <span class="header-icon">{{ isEditMode ? "✎" : "+" }}</span>
+              <h2>{{ isEditMode ? "ویرایش یادداشت" : "یادداشت جدید" }}</h2>
+            </div>
+            <button @click="handleClose" class="close-btn" aria-label="بستن">
+              ✕
+            </button>
           </div>
 
           <form @submit.prevent="handleSubmit" class="modal-body">
-            <!-- Title Input -->
+            <!-- Title -->
             <div class="form-group">
               <label for="title">عنوان</label>
               <input
                 id="title"
+                ref="titleInput"
                 v-model="formData.title"
                 type="text"
                 placeholder="عنوان یادداشت..."
                 maxlength="200"
                 required
               />
+              <span class="char-count">{{ formData.title.length }}/200</span>
             </div>
 
-            <!-- Content Textarea -->
+            <!-- Content -->
             <div class="form-group">
-              <label for="content">محتوا</label>
+              <label for="content">متن</label>
               <textarea
                 id="content"
                 v-model="formData.content"
-                placeholder="محتوای یادداشت..."
+                placeholder="متن یادداشت..."
                 rows="8"
                 required
               ></textarea>
             </div>
 
-            <!-- Tags Input -->
+            <!-- Tags -->
             <div class="form-group">
               <label for="tags">تگ‌ها</label>
-              <div class="tags-input-container">
-                <div class="selected-tags">
-                  <span
-                    v-for="(tag, index) in selectedTags"
-                    :key="index"
-                    class="tag-chip"
+              <div class="tags-input-container" @click="focusTagInput">
+                <span
+                  v-for="(tag, index) in selectedTags"
+                  :key="index"
+                  class="tag-chip"
+                >
+                  {{ tag }}
+                  <button
+                    type="button"
+                    @click.stop="removeTag(index)"
+                    class="remove-tag-btn"
+                    aria-label="حذف تگ"
                   >
-                    {{ tag }}
-                    <button
-                      type="button"
-                      @click="removeTag(index)"
-                      class="remove-tag-btn"
-                    >
-                      ×
-                    </button>
-                  </span>
-                </div>
+                    ×
+                  </button>
+                </span>
                 <input
                   id="tags"
+                  ref="tagInputEl"
                   v-model="tagInput"
                   type="text"
-                  placeholder="تگ جدید اضافه کنید..."
+                  :placeholder="selectedTags.length ? '' : 'تگ اضافه کنید...'"
                   @keydown.enter.prevent="addTag"
                   @keydown.comma.prevent="addTag"
+                  @keydown.delete="handleTagBackspace"
                 />
               </div>
               <p class="help-text">Enter یا ویرگول برای افزودن تگ</p>
             </div>
 
-            <!-- Important Checkbox -->
-            <div class="form-group checkbox-group">
+            <!-- Important -->
+            <div class="form-group">
               <label class="checkbox-label">
                 <input v-model="formData.is_important" type="checkbox" />
                 <span class="checkbox-text">
@@ -77,7 +87,7 @@
               </label>
             </div>
 
-            <!-- Attachments Section (if editing) -->
+            <!-- Existing attachments (edit mode) -->
             <div v-if="isEditMode && attachments.length" class="form-group">
               <label>فایل‌های پیوست</label>
               <div class="attachments-list">
@@ -86,9 +96,9 @@
                   :key="attachment.id"
                   class="attachment-item"
                 >
-                  <span class="attachment-name"
-                    >📎 {{ getFileName(attachment.file) }}</span
-                  >
+                  <span class="attachment-name">
+                    📎 {{ getFileName(attachment.file) }}
+                  </span>
                   <button
                     type="button"
                     @click="removeAttachment(attachment.id)"
@@ -101,7 +111,7 @@
               </div>
             </div>
 
-            <!-- File Upload -->
+            <!-- File upload -->
             <div class="form-group">
               <label for="file-upload">افزودن فایل پیوست</label>
               <div class="file-upload-container">
@@ -138,12 +148,12 @@
               </div>
             </div>
 
-            <!-- Error Message -->
-            <div v-if="error" class="error-message">
-              {{ error }}
-            </div>
+            <!-- Error -->
+            <Transition name="fade">
+              <div v-if="error" class="error-message">{{ error }}</div>
+            </Transition>
 
-            <!-- Action Buttons -->
+            <!-- Actions -->
             <div class="modal-actions">
               <button
                 type="button"
@@ -155,9 +165,9 @@
               </button>
               <button type="submit" class="btn-submit" :disabled="loading">
                 <span v-if="loading" class="loading-spinner"></span>
-                <span v-else>{{
-                  isEditMode ? "ذخیره تغییرات" : "ایجاد یادداشت"
-                }}</span>
+                <span v-else>
+                  {{ isEditMode ? "ذخیره تغییرات" : "ایجاد یادداشت" }}
+                </span>
               </button>
             </div>
           </form>
@@ -168,64 +178,44 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from "vue";
-import { STORAGE_KEYS } from "~/constants/storage";
+import { ref, watch, computed, nextTick } from "vue";
 
 const props = defineProps({
-  isOpen: {
-    type: Boolean,
-    required: true,
-  },
-  note: {
-    type: Object,
-    default: null,
-  },
+  isOpen: { type: Boolean, required: true },
+  note: { type: Object, default: null },
 });
 
 const emit = defineEmits(["close", "success"]);
 
-//استفاده از composable
 const api = useApi();
 
 const isEditMode = computed(() => !!props.note);
 
-// Form Data
-const formData = ref({
-  title: "",
-  content: "",
-  is_important: false,
-});
-
+const formData = ref({ title: "", content: "", is_important: false });
 const selectedTags = ref([]);
 const tagInput = ref("");
 const newFiles = ref([]);
 const attachments = ref([]);
-const fileInput = ref(null);
 
-// Loading States
+const fileInput = ref(null);
+const titleInput = ref(null);
+const tagInputEl = ref(null);
+
 const loading = ref(false);
 const deletingAttachment = ref(null);
 const error = ref(null);
 
-// Reset Form
 const resetForm = () => {
-  formData.value = {
-    title: "",
-    content: "",
-    is_important: false,
-  };
+  formData.value = { title: "", content: "", is_important: false };
   selectedTags.value = [];
   tagInput.value = "";
   newFiles.value = [];
   attachments.value = [];
   error.value = null;
-
-  if (fileInput.value) {
-    fileInput.value.value = "";
-  }
+  if (fileInput.value) fileInput.value.value = "";
 };
 
-// Watch for note changes
+// Sync form when note changes
 watch(
   () => props.note,
   (newNote) => {
@@ -235,7 +225,9 @@ watch(
         content: newNote.content || "",
         is_important: newNote.is_important || false,
       };
-      selectedTags.value = newNote.tags ? newNote.tags.map((t) => t.name) : [];
+      selectedTags.value = newNote.tags
+        ? newNote.tags.map((t) => (typeof t === "string" ? t : t.name))
+        : [];
       attachments.value = newNote.attachments || [];
     } else {
       resetForm();
@@ -244,43 +236,65 @@ watch(
   { immediate: true },
 );
 
-// Tag Management
+// Autofocus title on open + lock body scroll
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+      nextTick(() => titleInput.value?.focus());
+    } else {
+      document.body.style.overflow = "";
+    }
+  },
+);
+
+// Close on Escape
+const onKeydown = (e) => {
+  if (e.key === "Escape" && props.isOpen) handleClose();
+};
+onMounted(() => window.addEventListener("keydown", onKeydown));
+onUnmounted(() => {
+  window.removeEventListener("keydown", onKeydown);
+  document.body.style.overflow = "";
+});
+
+// Tags
+const focusTagInput = () => tagInputEl.value?.focus();
+
 const addTag = () => {
   const tag = tagInput.value.trim().replace(/,/g, "");
   if (tag && !selectedTags.value.includes(tag)) {
     selectedTags.value.push(tag);
-    tagInput.value = "";
+  }
+  tagInput.value = "";
+};
+
+const removeTag = (index) => selectedTags.value.splice(index, 1);
+
+const handleTagBackspace = () => {
+  if (!tagInput.value && selectedTags.value.length) {
+    selectedTags.value.pop();
   }
 };
 
-const removeTag = (index) => {
-  selectedTags.value.splice(index, 1);
-};
-
-// File Management
+// Files
 const handleFileSelect = (event) => {
-  const files = Array.from(event.target.files);
-  newFiles.value.push(...files);
+  newFiles.value.push(...Array.from(event.target.files));
 };
 
 const removeNewFile = (index) => {
   newFiles.value.splice(index, 1);
-  if (fileInput.value) {
-    fileInput.value.value = "";
-  }
+  if (fileInput.value) fileInput.value.value = "";
 };
 
-const getFileName = (url) => {
-  return url.split("/").pop();
-};
+const getFileName = (url) => (url ? url.split("/").pop() : "");
 
 const removeAttachment = async (attachmentId) => {
   if (!confirm("آیا از حذف این فایل اطمینان دارید؟")) return;
-
   deletingAttachment.value = attachmentId;
-
   try {
-    await api.delete(`/attachments/${attachmentId}/`);
+    await api.delete(`/notes/attachments/${attachmentId}/`);
     attachments.value = attachments.value.filter((a) => a.id !== attachmentId);
   } catch (e) {
     error.value = e.message || "خطا در حذف فایل";
@@ -291,14 +305,11 @@ const removeAttachment = async (attachmentId) => {
 
 const uploadAttachments = async (noteId) => {
   for (const file of newFiles.value) {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("note", noteId);
-
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("note", noteId);
     try {
-      await api.post("/attachments/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await api.post("/notes/attachments/", fd);
     } catch (e) {
       console.error("خطا در آپلود فایل:", file.name, e);
     }
@@ -308,7 +319,6 @@ const uploadAttachments = async (noteId) => {
 const handleSubmit = async () => {
   error.value = null;
   loading.value = true;
-
   try {
     const noteData = {
       title: formData.value.title,
@@ -318,18 +328,14 @@ const handleSubmit = async () => {
     };
 
     let noteId;
-
     if (isEditMode.value) {
-      // Update existing note
-      const data = await api.put(`/notes/${props.note.id}/`, noteData);
+      await api.put(`/notes/${props.note.id}/`, noteData);
       noteId = props.note.id;
     } else {
-      // Create new note
       const data = await api.post("/notes/", noteData);
       noteId = data.id;
     }
 
-    // Upload new attachments
     if (newFiles.value.length) {
       await uploadAttachments(noteId);
     }
@@ -344,7 +350,6 @@ const handleSubmit = async () => {
   }
 };
 
-// Close Modal
 const handleClose = () => {
   if (!loading.value) {
     resetForm();
@@ -352,14 +357,13 @@ const handleClose = () => {
   }
 };
 </script>
+
 <style scoped>
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -368,7 +372,7 @@ const handleClose = () => {
 }
 
 .modal-container {
-  background: white;
+  background: #fff;
   border-radius: 16px;
   width: 100%;
   max-width: 600px;
@@ -376,18 +380,38 @@ const handleClose = () => {
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
 }
 
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fef3c7;
+  color: #e39300;
+  border-radius: 10px;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
 .modal-header h2 {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: #1f2937;
   margin: 0;
@@ -400,17 +424,16 @@ const handleClose = () => {
   background: #f3f4f6;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: #6b7280;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
 }
-
 .close-btn:hover {
-  background: #e5e7eb;
-  color: #1f2937;
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .modal-body {
@@ -421,6 +444,7 @@ const handleClose = () => {
 
 .form-group {
   margin-bottom: 1.5rem;
+  position: relative;
 }
 
 .form-group label {
@@ -439,7 +463,7 @@ const handleClose = () => {
   border-radius: 8px;
   font-size: 0.95rem;
   transition: all 0.2s;
-  font-family: inherit;
+  box-sizing: border-box;
 }
 
 .form-group input[type="text"]:focus,
@@ -454,6 +478,14 @@ const handleClose = () => {
   min-height: 150px;
 }
 
+.char-count {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
 .tags-input-container {
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -463,18 +495,12 @@ const handleClose = () => {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+  cursor: text;
   transition: all 0.2s;
 }
-
 .tags-input-container:focus-within {
   border-color: #e39300;
   box-shadow: 0 0 0 3px rgba(227, 147, 0, 0.1);
-}
-
-.selected-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
 }
 
 .tag-chip {
@@ -486,20 +512,19 @@ const handleClose = () => {
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .remove-tag-btn {
   border: none;
   background: none;
   color: #92400e;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   cursor: pointer;
   padding: 0;
   line-height: 1;
   transition: color 0.2s;
 }
-
 .remove-tag-btn:hover {
   color: #78350f;
 }
@@ -508,7 +533,7 @@ const handleClose = () => {
   border: none;
   outline: none;
   flex: 1;
-  min-width: 150px;
+  min-width: 120px;
   padding: 0.25rem;
   font-size: 0.95rem;
 }
@@ -519,24 +544,19 @@ const handleClose = () => {
   margin-top: 0.5rem;
 }
 
-.checkbox-group {
-  margin-bottom: 1rem;
-}
-
 .checkbox-label {
   display: flex;
   align-items: center;
   cursor: pointer;
   user-select: none;
 }
-
 .checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
   margin-left: 0.75rem;
+  accent-color: #e39300;
 }
-
 .checkbox-text {
   display: flex;
   align-items: center;
@@ -544,7 +564,6 @@ const handleClose = () => {
   font-weight: 500;
   color: #374151;
 }
-
 .star-icon {
   font-size: 1.1rem;
 }
@@ -554,13 +573,11 @@ const handleClose = () => {
   align-items: center;
   gap: 1rem;
 }
-
 .file-input {
   display: none;
 }
-
 .file-upload-label {
-  padding: 0.75rem 1.5rem;
+  padding: 0.7rem 1.25rem;
   background: #f3f4f6;
   color: #374151;
   border-radius: 8px;
@@ -569,11 +586,9 @@ const handleClose = () => {
   transition: all 0.2s;
   font-size: 0.9rem;
 }
-
 .file-upload-label:hover {
   background: #e5e7eb;
 }
-
 .file-count {
   font-size: 0.9rem;
   color: #6b7280;
@@ -592,13 +607,10 @@ const handleClose = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
+  padding: 0.7rem 0.75rem;
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-}
-
-.attachment-name {
   font-size: 0.9rem;
   color: #374151;
 }
@@ -608,18 +620,16 @@ const handleClose = () => {
   border: none;
   background: #fee2e2;
   color: #991b1b;
-  padding: 0.25rem 0.75rem;
+  padding: 0.25rem 0.7rem;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
   transition: all 0.2s;
 }
-
 .remove-attachment-btn:hover,
 .remove-file-btn:hover {
   background: #fecaca;
 }
-
 .remove-attachment-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -656,25 +666,20 @@ const handleClose = () => {
   justify-content: center;
   gap: 0.5rem;
 }
-
 .btn-cancel {
   background: #f3f4f6;
   color: #374151;
 }
-
 .btn-cancel:hover:not(:disabled) {
   background: #e5e7eb;
 }
-
 .btn-submit {
   background: #e39300;
-  color: white;
+  color: #fff;
 }
-
 .btn-submit:hover:not(:disabled) {
   background: #c27d00;
 }
-
 .btn-cancel:disabled,
 .btn-submit:disabled {
   opacity: 0.6;
@@ -685,11 +690,10 @@ const handleClose = () => {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -700,19 +704,25 @@ const handleClose = () => {
 .modal-leave-active {
   transition: opacity 0.3s ease;
 }
-
 .modal-enter-active .modal-container,
 .modal-leave-active .modal-container {
   transition: transform 0.3s ease;
 }
-
 .modal-enter-from,
 .modal-leave-to {
   opacity: 0;
 }
-
 .modal-enter-from .modal-container,
 .modal-leave-to .modal-container {
-  transform: scale(0.9);
+  transform: scale(0.95);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

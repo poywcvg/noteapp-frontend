@@ -1,3 +1,4 @@
+<!-- NoteEditor.vue -->
 <template>
   <form class="note-editor" @submit.prevent="handleSubmit">
     <div class="form-group">
@@ -145,7 +146,6 @@ textarea {
   border: 1px solid #e3d6c6;
   border-radius: 16px;
   padding: 13px 15px;
-  font-family: inherit;
   font-size: 15px;
   background: #fff;
   color: #2d241d;
@@ -179,7 +179,6 @@ button {
   border: none;
   border-radius: 14px;
   padding: 11px 18px;
-  font-family: inherit;
   font-weight: 900;
   cursor: pointer;
 }

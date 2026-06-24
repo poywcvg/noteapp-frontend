@@ -1,37 +1,22 @@
+<!-- index.vue -->
 <template>
   <div class="notes-page">
     <div class="page-header">
       <h1>یادداشت‌های من</h1>
       <button @click="openCreateModal" class="btn-create">
-        ➕ یادداشت جدید
+        + یادداشت جدید
       </button>
     </div>
-
     <!-- Notes Grid -->
     <div v-if="!loading && notes.length" class="notes-grid">
-      <div
+      <NoteCard
         v-for="note in notes"
         :key="note.id"
-        class="note-card"
-        @click="openEditModal(note)"
-      >
-        <div class="note-header">
-          <h3 class="note-title">{{ note.title }}</h3>
-          <span v-if="note.is_important" class="important-badge">⭐</span>
-        </div>
-
-        <p class="note-content">{{ truncateContent(note.content) }}</p>
-
-        <div class="note-tags" v-if="note.tags && note.tags.length">
-          <span v-for="tag in note.tags" :key="tag.id" class="tag">
-            {{ tag.name }}
-          </span>
-        </div>
-
-        <div class="note-footer">
-          <span class="note-date">{{ formatDate(note.updated_at) }}</span>
-        </div>
-      </div>
+        :note="note"
+        @edit="openEditModal"
+        @archive="handleArchive"
+        @delete="handleDelete"
+      />
     </div>
 
     <!-- Loading State -->
@@ -60,11 +45,13 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import NoteModal from "~/components/NoteModal.vue";
-
+import NoteCard from "~/components/NoteCard.vue";
 definePageMeta({
   layout: "default",
 });
-
+const handleArchive = async (id) => {
+  console.log("آرشیو یادداشت:", id);
+};
 const notes = ref([]);
 const loading = ref(false);
 const isModalOpen = ref(false);
@@ -72,7 +59,26 @@ const selectedNote = ref(null);
 
 const fetchNotes = async () => {
   loading.value = true;
+  const handleDelete = async (id) => {
+    if (!confirm("آیا از حذف این یادداشت اطمینان دارید؟")) return;
 
+    try {
+      const token =
+        localStorage.getItem("access_token") || localStorage.getItem("token");
+      const response = await fetch(`http://localhost:8000/notes/${id}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        notes.value = notes.value.filter((n) => n.id !== id);
+      }
+    } catch (error) {
+      console.error("خطا در حذف:", error);
+    }
+  };
   try {
     const token =
       localStorage.getItem("access_token") || localStorage.getItem("token");
@@ -99,9 +105,35 @@ const openCreateModal = () => {
   isModalOpen.value = true;
 };
 
-const openEditModal = (note) => {
-  selectedNote.value = note;
-  isModalOpen.value = true;
+const openEditModal = async (note) => {
+  loading.value = true;
+  try {
+    const token =
+      localStorage.getItem("access_token") || localStorage.getItem("token");
+    const response = await fetch(`http://localhost:8000/notes/${note.id}/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("خطا در دریافت جزئیات");
+
+    const fullNote = await response.json();
+
+    selectedNote.value = {
+      id: fullNote.id,
+      title: fullNote.title || "",
+      content: fullNote.content || "", // ← حالا content واقعی داره
+      tags: fullNote.tags || [],
+    };
+
+    isModalOpen.value = true;
+  } catch (error) {
+    console.error("خطا:", error);
+    alert("خطا در بارگذاری یادداشت");
+  } finally {
+    loading.value = false;
+  }
 };
 
 const closeModal = () => {

@@ -1,53 +1,79 @@
 <template>
   <div class="app-layout">
     <AppSidebar />
+
     <main class="main-content">
-      <slot />
+      <div class="content-shell">
+        <slot />
+      </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { useAuth } from '~/composables/useAuth'
+import { onMounted } from "vue";
+import { useAuth } from "~/composables/useAuth";
 
-const auth = useAuth()
+const auth = useAuth();
 
 onMounted(() => {
-  auth.initAuth()
-})
+  auth.initAuth();
+});
 </script>
+
+<style>
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+html,
+body,
+#__nuxt {
+  min-height: 100%;
+  font-family: "BYekan", Tahoma, Arial, sans-serif;
+}
+
+body {
+  background: #f8fafc;
+  color: #111827;
+  direction: rtl;
+  text-align: right;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+</style>
 
 <style scoped>
 .app-layout {
   display: flex;
   min-height: 100vh;
-  background: #F7F5F2;
+  background: #f8fafc;
   direction: rtl;
+  font-family: inherit;
 }
 
 .main-content {
   flex: 1;
-  margin-right: 280px;
   min-height: 100vh;
-}
-</style>
-
-<style>
-/* Global styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  padding: 24px;
+  margin-right: 280px;
 }
 
-body {
-  font-family: 'Inter', 'Vazir', sans-serif;
-  background: #F7F5F2;
-  color: #1F2421;
-  direction: rtl;
+.content-shell {
+  max-width: 1008px;
+  min-height: calc(100vh - 48px);
+  margin: 0 auto;
+  padding: 16px 8px;
+  font-family: inherit;
 }
-
-/* Import fonts if needed */
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap');
 </style>

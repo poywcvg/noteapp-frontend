@@ -1,3 +1,4 @@
+<!-- NoteCard.vue -->
 <template>
   <article class="note-card" @click="$emit('edit', note)">
     <div class="card-header">
@@ -8,18 +9,7 @@
           class="icon-btn"
           title="بایگانی"
         >
-          <svg
-            width="16"
-            height="16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-          >
-            <path
-              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-            />
-          </svg>
+          <img :src="archiveIcon" alt="" style="filter: brightness(0)" />
         </button>
         <button @click="$emit('delete', note.id)" class="icon-btn" title="حذف">
           <svg
@@ -57,6 +47,8 @@
 </template>
 
 <script setup>
+import archiveIcon from "~/assets/icons/archive.svg";
+
 defineProps({
   note: Object,
 });
@@ -113,7 +105,6 @@ const tagColor = (name) => {
 }
 
 .note-title {
-  font-family: "DM Serif Display", serif;
   font-size: 20px;
   font-weight: 400;
   letter-spacing: -0.01em;

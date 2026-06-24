@@ -6,22 +6,22 @@
 
     <nav class="sidebar-nav">
       <NuxtLink to="/" class="nav-item" active-class="active">
-        <span class="nav-icon">📝</span>
+        <img :src="allNoteIcon" alt="" />
         <span class="nav-text">یادداشت‌ها</span>
       </NuxtLink>
 
       <NuxtLink to="/archive" class="nav-item" active-class="active">
-        <span class="nav-icon">📦</span>
-        <span class="nav-text">بایگانی</span>
+        <img :src="archiveIcon" alt="" />
+        <span class="nav-text">آرشیو ها</span>
       </NuxtLink>
 
       <NuxtLink to="/tags" class="nav-item" active-class="active">
-        <span class="nav-icon">🏷️</span>
-        <span class="nav-text">برچسب‌ها</span>
+        <img :src="tagsIcon" alt="" />
+        <span class="nav-text">برچسب‌ ها</span>
       </NuxtLink>
 
       <NuxtLink to="/trash" class="nav-item" active-class="active">
-        <span class="nav-icon">🗑️</span>
+        <img :src="trashIcon" alt="" />
         <span class="nav-text">سطل زباله</span>
       </NuxtLink>
     </nav>
@@ -36,6 +36,7 @@
         <div class="user-avatar">
           {{ userInitial }}
         </div>
+
         <div class="user-info">
           <div class="user-name">{{ userName }}</div>
           <div class="user-email">{{ user.email }}</div>
@@ -46,146 +47,156 @@
 </template>
 
 <script setup>
-const { user, logout } = useAuth()
-
+const { user, logout } = useAuth();
+import allNoteIcon from "~/assets/icons/AllNote.svg";
+import archiveIcon from "~/assets/icons/archive.svg";
+import tagsIcon from "~/assets/icons/tags.svg";
+import trashIcon from "~/assets/icons/trash.svg";
 const userInitial = computed(() => {
-  if (!user.value) return '?'
-  return user.value.first_name?.[0] || user.value.username?.[0] || 'U'
-})
+  if (!user.value) return "?";
+  return user.value.first_name?.[0] || user.value.username?.[0] || "U";
+});
 
 const userName = computed(() => {
-  if (!user.value) return 'کاربر'
+  if (!user.value) return "کاربر";
+
   if (user.value.first_name) {
-    return user.value.last_name 
+    return user.value.last_name
       ? `${user.value.first_name} ${user.value.last_name}`
-      : user.value.first_name
+      : user.value.first_name;
   }
-  return user.value.username
-})
+
+  return user.value.username;
+});
 
 const handleLogout = async () => {
-  await logout()
-  navigateTo('/login')
-}
+  await logout();
+  navigateTo("/login");
+};
 </script>
 
 <style scoped>
 .sidebar {
   position: fixed;
-  top: 0;
-  right: 0;
+  inset: 0 0 0 auto;
   width: 280px;
   height: 100vh;
-  background: #111827;
   display: flex;
   flex-direction: column;
-  padding: 24px 0;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+  background: #1a1c23;
+  color: #ffffff;
+  padding: 28px 20px 24px;
+  box-shadow: -10px 0 40px rgba(15, 23, 42, 0.08);
   z-index: 100;
 }
 
 .sidebar-header {
-  padding: 0 24px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 8px 24px;
 }
 
 .brand {
-  font-size: 28px;
-  font-weight: 700;
-  color: #FFFFFF;
   margin: 0;
-  text-align: center;
-  letter-spacing: 1px;
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: right;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 24px 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding-top: 12px;
 }
 
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 24px;
-  color: rgba(255, 255, 255, 0.7);
-  text-decoration: none;
-  transition: all 0.2s;
-  border-right: 3px solid transparent;
-  font-size: 15px;
-  font-weight: 400;
-}
-
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #FFFFFF;
-}
-
-.nav-item.active {
-  background: rgba(227, 147, 0, 0.15);
-  color: #E39300;
-  border-right-color: #E39300;
-}
-
-.nav-icon {
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.nav-text {
-  flex: 1;
-}
-
-.sidebar-footer {
-  padding: 0 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 24px;
-}
-
+.nav-item,
 .nav-logout {
   display: flex;
   align-items: center;
   gap: 12px;
-  width: 100%;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 8px;
-  font-size: 15px;
-  margin-bottom: 16px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
+.nav-item {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.nav-item:hover,
 .nav-logout:hover {
-  color: #E39300;
-  background: rgba(227, 147, 0, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.08);
+  transform: translateX(-2px);
+}
+
+.nav-item.active {
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.18);
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+.nav-icon {
+  width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nav-text {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  flex: 1;
+}
+
+.sidebar-footer {
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nav-logout {
+  width: 100%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  font: inherit;
+  margin-bottom: 16px;
 }
 
 .user-profile {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  padding: 14px;
   border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .user-avatar {
-  width: 40px;
-  height: 40px;
-  background: rgba(227, 147, 0, 0.2);
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
+  background: rgba(245, 158, 11, 0.16);
+  color: #f59e0b;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #E39300;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   flex-shrink: 0;
   text-transform: uppercase;
 }
@@ -196,20 +207,25 @@ const handleLogout = async () => {
 }
 
 .user-name {
-  color: #FFFFFF;
+  color: #ffffff;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .user-email {
-  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.52);
   font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  direction: ltr;
+  text-align: right;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
 }
 </style>
